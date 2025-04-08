@@ -1,0 +1,73 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' --- Акторы ---
+Person_Ext(patient, "Patient", "Пациент, записывающийся на приём")
+Person_Ext(doctor, "Doctor", "Медицинский специалист, использует систему для просмотра записей/карт")
+Person_Ext(reception, "Reception", "Сотрудник ресепшена, управляет записями, видит календарь визитов")
+Person_Ext(bookkeeper, "Bookkeeper", "Бухгалтер, работает с 1С и проверяет платежи")
+Person_Ext(warehouse, "Warehouse Manager", "Склад, работает с ТМЦ в 1С Торговля и склад")
+
+' --- Определяем границы системы (MVP) ---
+System_Boundary(mvp, "Medikamente MVP") {
+
+  ' Контейнер: Веб-Портал для пациентов/сотрудников
+  Container(webPortal, "Portal", "Web Application (React, Angular, etc.)", "Позволяет пациентам записаться на приём и сотрудникам просматривать и редактировать записи.")
+
+  ' Контейнер: Бэкенд-сервис
+  Container(apiBackend, "Backend API", "Java/Spring Boot или Node.js", "Обрабатывает логику записи, авторизацию, интеграции с 1С и лабораторией, аудит, хранение данных. Реализует RBAC/ABAC.")
+
+  ' Контейнер: База данных
+  ContainerDb(database, "Patient Database", "PostgreSQL (TDE + шифрование)", "Хранение персональных и медицинских данных (PII/PHI). Отдельные поля шифруются, ведётся аудит доступа.")
+
+  ' Контейнер: Система логирования и мониторинга
+  Container(monitoring, "Logging & Monitoring", "ELK Stack / Prometheus / Grafana",  "Централизованный сбор логов, аудит действий пользователей, мониторинг состояния системы.")
+}
+
+' --- Внешние системы, которые остаются ---
+System_Ext(oneCAccounting, "1С Бухгалтерия предприятия", "File-based / интеграция по SOAP/REST")
+System_Ext(oneCTrade, "1С Торговля и склад", "File-based / интеграция по SOAP/REST")
+System_Ext(mailServer, "Exchange Mail Server", "Корпоративная почта, уведомления")
+System_Ext(kkm, "KKM (Контрольно-кассовые машины)", "Подключены к 1С, передают данные о платежах")
+System_Ext(lab, "Laboratory", "Внешняя лаборатория", "Возвращает результаты анализов через HTTPS/API")
+
+' --- Определяем связи ---
+' 1) Пациент / Портал
+Rel(patient, webPortal, "Заходит на сайт/в ЛК, записывается на приём", "HTTPS/TLS")
+
+' 2) Ресепшен / Портал
+Rel(reception, webPortal, "Управляет записями, видит календарь", "HTTPS/TLS, RBAC")
+
+' 3) Врач / Портал
+Rel(doctor, webPortal, "Просматривает записи, вносит назначения", "HTTPS/TLS, RBAC")
+
+' 4) Бухгалтер / 1С
+Rel(bookkeeper, oneCAccounting, "Проверяет платежи, ведёт бухгалтерский учёт")
+
+' 5) Склад / 1С Торговля и склад
+Rel(warehouse, oneCTrade, "Работает с ТМЦ и складскими остатками")
+
+' 6) Портал -> Backend API
+Rel(webPortal, apiBackend, "Отправляет/получает данные (записи, мед. карты)", "HTTPS/TLS")
+
+' 7) Backend API -> Database
+Rel(apiBackend, database, "Запросы/запись данных (PII/PHI)", "SQL + TDE/шифрование")
+
+' 8) Backend API -> Monitoring
+Rel(apiBackend, monitoring, "Передача логов и метрик", "Secure channel")
+
+' 9) Интеграции с 1С
+Rel(apiBackend, oneCAccounting, "Передача данных о пациентах/платежах", "HTTPS/VPN")
+Rel(apiBackend, oneCTrade, "Передача данных о товарах/материалах", "HTTPS/VPN")
+
+' 10) Интеграция с лабораторией
+Rel(apiBackend, lab, "Получение результатов анализов", "HTTPS/TLS")
+
+' 11) Почтовый сервер
+Rel(apiBackend, mailServer, "Отправка уведомлений (email)", "SMTP/TLS")
+Rel(mailServer, reception, "Уведомления/подтверждения", "Возможно, внутренний канал")
+
+' 12) KKM связаны с 1С
+Rel(kkm, oneCAccounting, "Передача данных о платеже")
+
+@enduml

@@ -1,1 +1,5 @@
-# architecture-medikamente
+# Сдача проектной работы 10 спринта
+
+![Задание 1](task1/task1.md)
+
+![Задание 2](task2/task2.md)

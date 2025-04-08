@@ -1,0 +1,35 @@
+@startuml
+
+title DFD #1: Запись пациента на приём + Меры безопасности
+
+actor "Пациент" as Patient
+rectangle "Ресепшен (Процесс)\n[Приём заявки]" as Reception
+database "Excel (Журнал записи)\n[TAG: PII]" as Excel_Journal
+rectangle "Врач\n(Медицинский специалист)" as Doctor
+
+' Поток данных от пациента к ресепшен
+Patient --> Reception: Предоставляет (ФИО, контакты)\nШифрованный канал невозможен оффлайн,\nно данные вводятся вручную.
+
+note right of Patient
+Тег: PII
+(личные данные)
+end note
+
+' Ресепшен заносит эти данные в Excel
+Reception --> Excel_Journal: Создаёт/Обновляет запись\n(доступ только сотрудникам ресепшен)
+
+note left of Excel_Journal
+Меры:
+- RBAC (права только ресепшен)
+- Файл в шифрованной папке
+- Аудит доступа
+- Тег PII
+end note
+
+' Ресепшен передаёт информацию врачу
+Reception --> Doctor: Информация о визите
+note on link
+Передача внутри корпоративной сети (TLS/VPN)
+end note
+
+@enduml
